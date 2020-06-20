@@ -8,7 +8,7 @@ def loadImage(ImageName):
     pixels = list(im.getdata())
     width, height = im.size 
     pixels = [[pixel[0], pixel[1], pixel[2]] for pixel in pixels]
-    return pixels
+    return pixels,width, height
 
 def encodeImage(pixels,byteArray):
     encodedArr = pixels 
@@ -41,7 +41,6 @@ def encodeImage(pixels,byteArray):
                 x = int(pixels[numPixel][colour]) | int((orByte))
             encodedArr[numPixel][colour] = int('0b' + str(bin(x)[2:]),2)
             colour = colour +1
-    #print(encodedArr) 
     return encodedArr
     '''
     print(byteArray)
@@ -49,10 +48,10 @@ def encodeImage(pixels,byteArray):
         encodedArr[l] =tuple(encodedArr[l])
     return encodedArr
 '''
-def saveImage(encodeArr,outputName,h,v): 
-    im = Image.new('RGB', (h,v))
+def saveImage(encodeArr,outputName,width,height): 
+    im = Image.new('RGB', (width,height))
     imageSize=[]
-    for x in range(h*v):
+    for x in range(width*height):
         imageSize.append(tuple(encodeArr[x]))
     im.putdata(imageSize)
     im.save(outputName, "PNG")
@@ -73,23 +72,19 @@ def getInput():
             elif(sys.argv[argNum].upper().find("-O") >-1):
                 outputName =sys.argv[argNum+1]
             elif(sys.argv[argNum].upper().find("-M")>-1):
-                message =sys.argv[argNum+1]
-            elif(sys.argv[argNum].upper().find("-H")>-1):
-                h = int(sys.argv[argNum+1])
-            elif(sys.argv[argNum].upper().find("-V")>-1):
-                v = int(sys.argv[argNum+1])               
+                message =sys.argv[argNum+1]         
             else:
                 continue
                 #print("missing arguments")
-    return ImageName,outputName,message,h,v
+    return ImageName,outputName,message
 
-def makeCOE(encodedArr,h,v):
+def makeCOE(encodedArr,width,height):
     temp = []
     s = "memory_initialization_radix=10;\n"
     s = s+ "memory_initialization_vector="
-    for RGB in range(h*v):
+    for RGB in range(width*height):
         for colour in encodedArr[RGB]:
-            #print(s)
+            #print(str(colour))
             s = s + str(colour) + ","
     s = s[:-1]
     s = s +";"
@@ -105,13 +100,18 @@ def saveCOE(fName,coe):
 		f.close()
 
 def main():
-    ImageName,outputName,message,h,v = getInput()
-    pixels = loadImage(ImageName)
+    ImageName,outputName,message = getInput()
+    print("Length of Message:", len(message))
+    print("Minimum number of bits required:", len(message)*8)
+    pixels,width,height = loadImage(ImageName)
+    print("Image Dimensions:",width,"x", height)
+    print("Number of pixels:",len(pixels))
+    print("Number of RGB:",len(pixels)*3)
     byteArray = string2bits(message)
     encodedArr = encodeImage(pixels,byteArray)
-    #print(encodedArr)
-    coe = makeCOE(encodedArr,h,v)
+    #print("Length of encodedArray:",len(encodedArr))
+    coe = makeCOE(encodedArr,width,height)
     saveCOE(outputName[:-3] +"coe", coe)
-    saveImage(encodedArr,outputName,h,v)
+    saveImage(encodedArr,outputName,width,height)
 
 main()
