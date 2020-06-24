@@ -1,34 +1,15 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 09.06.2020 16:48:16
-// Design Name: 
-// Module Name: top
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
-
 module top(
     input CLK100MHZ,
     input BTNC, // start button
     input BTNL, // shift left button
     input BTNR, // shift right button
     input BTNU, // reset button
+    output [15:0] LED,
     output [7:0]SegmentDrivers,
     output [7:0]SevenSegment
     );
+    
     reg ena = 1;
     reg wea = 0;
     reg [11:0] addra = 0;
@@ -37,19 +18,18 @@ module top(
     reg [7:0] lshift = 0;
     reg [7:0] value = 0;
     reg [5:0] SSValue [7:0];
-    reg [7:0] letter [127:0]; // array of ascii number of each letter
-    reg [6:0] c = 0; // c used to loop through 128 letters in the image. From 0 to 127
+    reg [7:0] letter [1000:0]; // array of ascii number of each letter 455*285*3 =389025/8=48628
+    reg [10:0] c = 0; // c used to loop through 256 letters in the image. From 0 to 255
     reg [2:0] cSS = 0; // couinter to loop through the message to Sevent segment number
     reg [7:0] ssShift = 0;
     reg [2:0] b = 6; // b used to loop through bits in a byte. From 0 to 7 ###REMEMBER THIS MAY NEED TO BE CHANGED WHEN PROTOTYPING
     reg [0:0] bStop = 1;
-    
+    reg [15:0] decaNanoSeconds = 16'd0;
       
       //Add the reset
     wire Reset;
-    Delay_Reset DReset(CLK100MHZ, BTNC, Reset);
-    
-    
+    Debounce Reset_Button(CLK100MHZ, BTNC, Reset);
+    //32*32*3/8 = 384
     //Debouncing Buttons
     wire LButton;
     wire RButton;
@@ -57,7 +37,12 @@ module top(
     Debounce L_Button(CLK100MHZ,BTNL,LButton);
     Debounce R_Button(CLK100MHZ,BTNR,RButton);  
     
-    
+   SS_Driver SS_Driver1(
+    CLK100MHZ, BTNU,
+	SSValue[0], SSValue[1], SSValue[2], SSValue[3],  SSValue[4], SSValue[5], SSValue[6], SSValue[7],// Use temporary test values before adding hours2, hours1, mins2, mins1
+	SegmentDrivers,
+	SevenSegment
+); 
     
 blk_mem_gen_0 BRAM (
     .clka(CLK100MHZ),
@@ -73,11 +58,12 @@ integer i;
 
 initial
 begin
-    for (k = 0; k < 128; k = k + 1) begin
+    for (k = 0; k < 1001; k = k + 1) begin
         letter[k] = 36;
     end
 end
 
+assign LED = decaNanoSeconds;
 
 always @(posedge CLK100MHZ) begin
     if(Reset) begin
@@ -93,7 +79,8 @@ always @(posedge CLK100MHZ) begin
         end
     end
 
-
+// width of 128 EEE4120F yo da
+//              f June 2020
 
     if(LButton) begin
         ssShift <= ssShift - 1;
@@ -123,6 +110,7 @@ always @(posedge CLK100MHZ) begin
 
     if (bStop == 1)
     begin
+        decaNanoSeconds <= decaNanoSeconds+1;
         addra <= addra + 1;
         if (b<9) begin
             b <= b + 1;
@@ -165,13 +153,5 @@ always @(posedge CLK100MHZ) begin
 
     
 end // end always posedge clk
-
-
-SS_Driver SS_Driver1(
-    CLK100MHZ, BTNU,
-	SSValue[0], SSValue[1], SSValue[2], SSValue[3],  SSValue[4], SSValue[5], SSValue[6], SSValue[7],// Use temporary test values before adding hours2, hours1, mins2, mins1
-	SegmentDrivers,
-	SevenSegment
-);
-
+    
 endmodule
